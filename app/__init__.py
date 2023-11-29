@@ -4,6 +4,8 @@ from controllers import connect
 from bson import ObjectId
 from controllers import api
 from config import config
+from flask_cors import CORS
+
 
 db, lf, users = connect.db()
 
@@ -19,6 +21,8 @@ def create_app(name):
 
     app.register_blueprint(api)
     jwt = JWTManager(app)
+    cors = CORS(app)
+    app.config['CORS_HEADERS'] = 'Content-Type'
     
     @jwt.user_lookup_loader
     def user_lookup_callback(_jwt_header, jwt_data):

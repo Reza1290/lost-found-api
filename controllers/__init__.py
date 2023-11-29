@@ -1,6 +1,7 @@
 from flask import request,Blueprint, jsonify, json
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token
 from flask_bcrypt import bcrypt
+from flask_cors import cross_origin
 
 
 from datetime import datetime
@@ -41,6 +42,7 @@ def check_document_owner(func):
     return wrapper
 
 @api.route('/')
+@cross_origin()
 def hello_world():
 	return "Kamu Siapa Kenyal Seperti Jelly"
 
@@ -57,7 +59,7 @@ def post():
             'date': datetime.strptime("2023-11-29T12:30:00Z", "%Y-%m-%dT%H:%M:%SZ"),
             'status': 'lost',
             'createdAt' : datetime.utcnow(),
-            'user_id': ObjectId("655ea3b53f12c3eea2822699")
+            'user_id': ObjectId("65672f41cb56792387f36d7a")
         }
 		
         result = lf.insert_one(data)
@@ -78,6 +80,7 @@ def post():
     
 @api.route('/lostfound', methods=['GET'])
 @jwt_required()
+@cross_origin()
 def get_all_lostfound():
     entries = []
 
@@ -91,6 +94,7 @@ def get_all_lostfound():
             user_info = {}
 
         entries.append({
+            'id': str(document.get('_id')),
             'item_name': document.get('item_name', 'N/A'),
             'description': document.get('description', 'N/A'),
             'location': document.get('location', 'N/A'),
@@ -105,6 +109,7 @@ def get_all_lostfound():
 
 @api.route('/lostfound/<string:entry_id>', methods=['GET'])
 @jwt_required()
+@cross_origin()
 @check_document_owner
 def get_lostfound(entry_id):
     try:
@@ -149,13 +154,17 @@ def get_lostfound(entry_id):
     
 @api.route('/lostfound', methods=['POST'])
 @jwt_required()
+@cross_origin()
 def post_lostfound():
 	try:
+		
 		data = request.data
   		
 		data_dict = json.loads(data.decode('utf-8'))
+		now_user = get_jwt_identity()
 		data_dict['createdAt'] = datetime.utcnow()
-  
+		data_dict['date'] = datetime.strptime(str(data_dict['date']), "%Y-%m-%d")
+		data_dict['user_id'] = ObjectId(str(now_user))
 		result = lf.insert_one(data_dict)
   
 		response = {
@@ -174,12 +183,15 @@ def post_lostfound():
 
 @api.route('/lostfound/<string:entry_id>', methods=['PUT'])
 @jwt_required()
+@cross_origin()
+# @check_document_owner
 def update_lostfound(entry_id):
     try:
         data = request.data
         data_dict = json.loads(data.decode('utf-8'))
         data_dict['updatedAt'] = datetime.utcnow()
-
+        data_dict['date'] = datetime.strptime(str(data_dict['date']), "%Y-%m-%d")
+  
         result = lf.update_one({'_id': ObjectId(entry_id)}, {'$set': data_dict})
 
         if result.matched_count == 1:
@@ -200,6 +212,7 @@ def update_lostfound(entry_id):
 
 @api.route('/lostfound/<string:entry_id>', methods=['DELETE'])
 @jwt_required()
+@cross_origin()
 def delete_lostfound(entry_id):
     try:
         result = lf.delete_one({'_id': ObjectId(entry_id)})
@@ -220,6 +233,7 @@ def delete_lostfound(entry_id):
 
 
 @api.route('/login', methods=['POST'])
+@cross_origin()
 def login():
     try:
         data = request.json
@@ -236,7 +250,7 @@ def login():
             
             access_token = create_access_token(identity=str(user["_id"]))
 
-            return jsonify({"message": "Login successful", "access_token": access_token}), 200
+            return jsonify({"message": "Login successful", "access_token": access_token, "user" : username}), 200
         else:
             
             return jsonify({"message": "Login failed. Invalid credentials"}), 401
@@ -249,6 +263,7 @@ def login():
         return jsonify(response), 500
     
 @api.route('/register',methods=['POST'])
+@cross_origin()
 def register():
     try:
         data = request.json
