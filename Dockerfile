@@ -4,7 +4,7 @@ WORKDIR /
 
 COPY . .
 
-EXPOSE 8084
+EXPOSE 8080
 
 RUN pip install -r requirements.txt
 
